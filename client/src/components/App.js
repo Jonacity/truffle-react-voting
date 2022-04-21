@@ -1,10 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
-import VotingContract                         from "./contracts/Voting.json";
-import getWeb3                                from "./getWeb3";
+import VotingContract                         from "../contracts/Voting.json";
+import getWeb3                                from "../getWeb3";
+import WrapperProposal                        from "./WrapperProposal";
+import WrapperVoter                           from "./WrapperVoter";
+import Header                                 from "./Header";
+import Content                                from "./Content";
+import Footer                                 from "./Footer";
+import Button                                 from 'react-bootstrap/Button';
+import Container                              from 'react-bootstrap/Container';
+import Spinner                                from 'react-bootstrap/Spinner';
+import Stack                                  from 'react-bootstrap/Stack';
 import "./App.css";
-
-import WrapperProposal from "./WrapperProposal";
-import WrapperVoter from "./WrapperVoter";
 
 const App = () => {
 
@@ -24,7 +30,7 @@ const App = () => {
   const [votersCount, setVotersCount] = useState(0);
   const [isRegistered, setIsRegistered] = useState(false);
 
-  const inputRef = useRef();
+  // const inputRef = useRef();
 
   useEffect(() => {
     (async () => {
@@ -150,13 +156,12 @@ const App = () => {
   }, [workflowStatus]);
 
   const handleSubmitVoter = async () => {
-    console.log("vInput", voterInput);
     const { contract, owner } = w3State;
     await contract.methods.addVoter(voterInput).send({ from: owner });
   }
 
   const handleSubmitProposal = async () => {
-    const { accounts, contract, owner } = w3State;
+    const { accounts, contract } = w3State;
     await contract.methods.addProposal(proposalInput).send({ from: accounts[0] });
   }
 
@@ -166,31 +171,31 @@ const App = () => {
   }
 
   const startProposalsRegistering = async () => {
-    const { accounts, contract, owner } = w3State;
-    await w3State.contract.methods.startProposalsRegistering().send({ from: owner });
+    const { contract, owner } = w3State;
+    await contract.methods.startProposalsRegistering().send({ from: owner });
     await syncWorkflowStatus();
   }
 
   const endProposalsRegistering = async () => {
-    const { accounts, contract, owner } = w3State;
+    const { contract, owner } = w3State;
     await contract.methods.endProposalsRegistering().send({ from: owner });
     await syncWorkflowStatus();
   }
 
   const startVotingSession = async () => {
-    const { accounts, contract, owner } = w3State;
+    const { contract, owner } = w3State;
     await contract.methods.startVotingSession().send({ from: owner });
     await syncWorkflowStatus();
   }
 
   const endVotingSession = async () => {
-    const { accounts, contract, owner } = w3State;
+    const { contract, owner } = w3State;
     await contract.methods.endVotingSession().send({ from: owner });
     await syncWorkflowStatus();
   }
 
   const tallyVotes = async () => {
-    const { accounts, contract, owner } = w3State;
+    const { contract, owner } = w3State;
     await contract.methods.tallyVotes().send({ from: owner });
     await syncWorkflowStatus();
     const proposalsList = await contract.methods.getProposals().call({ from: owner });
@@ -224,17 +229,17 @@ const App = () => {
   const renderStepButton = () => {
     switch (workflowStatus) {
       case "0":
-        return <button onClick={startProposalsRegistering}>Start proposal registration</button>;
+        return <Button onClick={startProposalsRegistering}>Start proposal registration</Button>;
       case "1":
-        return <button onClick={endProposalsRegistering}>End proposal registration</button>;
+        return <Button onClick={endProposalsRegistering}>End proposal registration</Button>;
       case "2":
-        return <button onClick={startVotingSession}>Start voting session</button>;
+        return <Button onClick={startVotingSession}>Start voting session</Button>;
       case "3":
-        return <button onClick={endVotingSession}>End voting session</button>;
+        return <Button onClick={endVotingSession}>End voting session</Button>;
       case "4":
-        return <button onClick={tallyVotes}>Tally votes</button>;
+        return <Button onClick={tallyVotes}>Tally votes</Button>;
       case "5":
-        return <button onClick={resetVote}>Reset vote</button>;
+        return <Button onClick={resetVote}>Reset vote</Button>;
     }
   }
 
@@ -248,39 +253,54 @@ const App = () => {
   const displayWinner = () => proposalWinningId && proposals[proposalWinningId];
 
   if (w3State.web3 === null) {
-    return <div>Loading Web3, accounts, and contract...</div>;
+    return (
+      <Container className="text-center">
+         <br /> <br />
+        <h3>Loading Web3, accounts, and contract...</h3>
+        <Spinner animation="border" />
+      </Container>
+    )
   }
 
   return (
     <div className="App">
-      <h1>Voting dApp project</h1>
-      <p>Truffle react box example</p>
-      <p><strong>You are {renderLoggedUser()} ({w3State.accounts[0]})</strong></p>
-      {isOwner() &&
-      <div>
-        <button onClick={resetVote}>Reset vote</button>
-        <br /><br />
-      </div>}
-      {isOwner() && renderStepButton()}
-      {isOwner() &&
-        <WrapperVoter
-          status={workflowStatus}
-          count={votersCount}
-          handleSubmitVoter={handleSubmitVoter}
-          currentValue={voterInput}
-          setValue={setVoterInput}
-        />}
-      {displayWinner() && <p><b>The winner proposal is: {proposals[proposalWinningId].description}</b></p>}
-      {isRegistered &&
-        <WrapperProposal
-          status={workflowStatus}
-          proposalsList={proposals}
-          currentUser={currentUser}
-          handleSubmitProposal={handleSubmitProposal}
-          vote={vote}
-          currentValue={proposalInput}
-          setValue={setProposalInput}
-        />}
+      <Header userAddress={w3State.accounts[0]} userType={renderLoggedUser()} />
+      <Container>
+        <Content />
+        {/* {isOwner() &&
+        <div>
+          <Button onClick={resetVote}>Reset vote</Button>
+          <br /><br />
+        </div>} */}
+        <Stack gap={2} className="col-md-4 mx-auto">
+          {isOwner() && renderStepButton()}
+          {isOwner() &&
+            <WrapperVoter
+              status={workflowStatus}
+              count={votersCount}
+              handleSubmitVoter={handleSubmitVoter}
+              currentValue={voterInput}
+              setValue={setVoterInput}
+            />}
+        </Stack>
+        {displayWinner() && (
+          <>
+            <br />
+            <p><b>🔥 The winner proposal is: {proposals[proposalWinningId].description} 🔥</b></p>
+          </>
+        )}
+        {isRegistered &&
+          <WrapperProposal
+            status={workflowStatus}
+            proposalsList={proposals}
+            currentUser={currentUser}
+            handleSubmitProposal={handleSubmitProposal}
+            vote={vote}
+            currentValue={proposalInput}
+            setValue={setProposalInput}
+          />}
+        </Container>
+        <Footer />
     </div>
   );
 }
