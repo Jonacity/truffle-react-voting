@@ -3,6 +3,9 @@ import VotingContract                         from "./contracts/Voting.json";
 import getWeb3                                from "./getWeb3";
 import "./App.css";
 
+import WrapperProposal from "./WrapperProposal";
+import WrapperVoter from "./WrapperVoter";
+
 const App = () => {
 
   const [w3State, setState] = useState({
@@ -58,6 +61,11 @@ const App = () => {
           setVotersCount(voters.length);
           const proposalsList = await instance.methods.getProposals().call({ from: accounts[0] });
           setProposals(proposalsList);
+
+          if (workflowStatus === "5") {
+            const proposalWinningId = await instance.methods.winningProposalID().call();
+            setProposalWinningId(proposalWinningId);
+          }
         } else {
           let options = {
             fromBlock: 0,
@@ -73,7 +81,6 @@ const App = () => {
             toBlock: 'latest'
           };  
           const votersData = await instance.getPastEvents("VoterRegistered", options)
-          // console.log("votersData", votersData);
           votersData.map(async event => {
             if (event.returnValues.voterAddress === accounts[0]) {
               setIsRegistered(true);
@@ -83,6 +90,11 @@ const App = () => {
               if (parseInt(workflowStatus) >= 1) {
                 const proposalsList = await instance.methods.getProposals().call({ from: accounts[0] });
                 setProposals(proposalsList);
+              }
+
+              if (workflowStatus === "5") {
+                const proposalWinningId = await instance.methods.winningProposalID().call();
+                setProposalWinningId(proposalWinningId);
               }
             }
           });
@@ -127,51 +139,19 @@ const App = () => {
 
   useEffect(() => {
     (async () => {
-        // if (state && state.contract && state.contract.methods) {
-          if (workflowStatus === "5") {
-              const { contract, owner } = w3State;
-              const proposalsList = await contract.methods.getProposals().call({ from: owner });
-              const proposalWinningId = await contract.methods.winningProposalID().call({ from: owner });
-              setProposals(proposalsList);
-              setProposalWinningId(proposalWinningId);
-          }
+        if (workflowStatus === "5" && isRegistered) {
+          const { accounts, contract } = w3State;
+          const proposalsList = await contract.methods.getProposals().call({ from: accounts[0] });
+          setProposals(proposalsList);
+          const proposalWinningId = await contract.methods.winningProposalID().call();
+          setProposalWinningId(proposalWinningId);
+        }
     })()
-}, [workflowStatus]);
-
-  // useEffect(() => {
-  //   (function () {
-  //       if (workflowStatus === "0") {
-  //           setActiveStep(0);
-  //       } else if (
-  //           workflowStatus === "1" ||  
-  //           workflowStatus === "2"
-  //       ) {
-  //           setActiveStep(1);
-  //       } else if (
-  //           workflowStatus === "3" ||  
-  //           workflowStatus === "4"
-  //       ) {
-  //           setActiveStep(2);
-  //       } else if (workflowStatus === "5") {
-  //           setActiveStep(4);
-  //       }
-  //   })();
-  // }, [workflowStatus]);
-
-  console.log("currentUser2", currentUser);
-
-  const handleChangeVoter = (e) => {
-    e.preventDefault();
-    setVoterInput(e.target.value);
-  }
-
-  const handleChangeProposal = (e) => {
-    e.preventDefault();
-    setProposalInput(e.target.value);
-  }
+  }, [workflowStatus]);
 
   const handleSubmitVoter = async () => {
-    const { accounts, contract, owner } = w3State;
+    console.log("vInput", voterInput);
+    const { contract, owner } = w3State;
     await contract.methods.addVoter(voterInput).send({ from: owner });
   }
 
@@ -213,6 +193,8 @@ const App = () => {
     const { accounts, contract, owner } = w3State;
     await contract.methods.tallyVotes().send({ from: owner });
     await syncWorkflowStatus();
+    const proposalsList = await contract.methods.getProposals().call({ from: owner });
+    setProposals(proposalsList);
   }
 
   const resetVote = async () => {
@@ -222,6 +204,7 @@ const App = () => {
     setProposals([]);
     const voters = await contract.methods.getVoters().call({ from: accounts[0] });
     setVotersCount(voters.length);
+    setProposalWinningId(null);
   }
 
   const isOwner = () => w3State.accounts[0] === w3State.owner;
@@ -237,8 +220,6 @@ const App = () => {
 
     return "not registered";
   };
-
-  const renderVotersCount = () => <p>{votersCount} registered {votersCount > 1 ? "voters" : "voter"}</p>
 
   const renderStepButton = () => {
     switch (workflowStatus) {
@@ -264,51 +245,7 @@ const App = () => {
     setCurrentUser(currentUser);
   }
 
-  const renderVoterButton = () => {
-    return (
-      <div>
-        <br /><br />
-        <input value={voterInput} onChange={handleChangeVoter} />
-        <button onClick={handleSubmitVoter}>Add voter</button>
-      </div>
-    )
-  }
-
-  const wrapperProposal = () => {
-    return (
-      <div>
-        {workflowStatus === "1" && (
-          <>
-            <input value={proposalInput} onChange={handleChangeProposal} />
-            <button onClick={handleSubmitProposal}>Add proposal</button>
-          </>
-        )}
-        {workflowStatus !== "0" && renderProposals(proposals)}
-      </div>
-    )
-  }
-
-  const renderProposals = (proposals) => {
-    if (proposals.length === 0) {
-      return <p>There is no proposal registered yet.</p>
-    }
-  
-    return (
-      <div>
-        {proposalWinningId && <p><b>The winner proposal is: {proposals[proposalWinningId].description}</b></p>}
-        Proposals:
-        {proposals.map((proposal, index) =>
-          <div key={index}>
-            <p>{proposal.description}</p>
-            {workflowStatus === "3" && !currentUser.hasVoted &&
-            <button onClick={() => vote(index)}>Vote</button>}
-            {workflowStatus === "5" &&
-            <div>{proposal.voteCount} {proposal.voteCount > 1 ? "votes" : "vote"}</div>}
-          </div>
-        )}
-      </div>
-    )
-  }
+  const displayWinner = () => proposalWinningId && proposals[proposalWinningId];
 
   if (w3State.web3 === null) {
     return <div>Loading Web3, accounts, and contract...</div>;
@@ -320,15 +257,30 @@ const App = () => {
       <p>Truffle react box example</p>
       <p><strong>You are {renderLoggedUser()} ({w3State.accounts[0]})</strong></p>
       {isOwner() &&
-      <>
-        <br />
+      <div>
         <button onClick={resetVote}>Reset vote</button>
-        <br />
-      </>}
-      {isOwner() && renderVotersCount(votersCount)}
+        <br /><br />
+      </div>}
       {isOwner() && renderStepButton()}
-      {isOwner() && workflowStatus === "0" && renderVoterButton()}
-      {isRegistered && wrapperProposal()}
+      {isOwner() &&
+        <WrapperVoter
+          status={workflowStatus}
+          count={votersCount}
+          handleSubmitVoter={handleSubmitVoter}
+          currentValue={voterInput}
+          setValue={setVoterInput}
+        />}
+      {displayWinner() && <p><b>The winner proposal is: {proposals[proposalWinningId].description}</b></p>}
+      {isRegistered &&
+        <WrapperProposal
+          status={workflowStatus}
+          proposalsList={proposals}
+          currentUser={currentUser}
+          handleSubmitProposal={handleSubmitProposal}
+          vote={vote}
+          currentValue={proposalInput}
+          setValue={setProposalInput}
+        />}
     </div>
   );
 }
