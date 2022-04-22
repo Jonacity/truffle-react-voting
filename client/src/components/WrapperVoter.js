@@ -15,11 +15,11 @@ const WrapperVoter = props => {
         e.preventDefault();
         setValue(e.target.value);
     }
-    
+
     const renderVotersCount = (count) => (
         <Badge pill bg="success">{count} registered {count > 1 ? "voters" : "voter"}</Badge>
     )
-    
+
     const renderVoterInput = () => (
         <InputGroup className="mb-3" value={currentValue} onChange={handleChangeVoter}>
             <FormControl

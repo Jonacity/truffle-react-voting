@@ -1,15 +1,17 @@
-import React, { useState, useEffect, useRef } from "react";
-import VotingContract                         from "../contracts/Voting.json";
-import getWeb3                                from "../getWeb3";
-import WrapperProposal                        from "./WrapperProposal";
-import WrapperVoter                           from "./WrapperVoter";
-import Header                                 from "./Header";
-import Content                                from "./Content";
-import Footer                                 from "./Footer";
-import Button                                 from 'react-bootstrap/Button';
-import Container                              from 'react-bootstrap/Container';
-import Spinner                                from 'react-bootstrap/Spinner';
-import Stack                                  from 'react-bootstrap/Stack';
+import React, { useState, useEffect } from "react";
+import VotingContract                 from "./contracts/Voting.json";
+import getWeb3                        from "./getWeb3";
+import WrapperProposal                from "./components/WrapperProposal";
+import WrapperVoter                   from "./components/WrapperVoter";
+import Header                         from "./components/Header";
+import Content                        from "./components/Content";
+import Footer                         from "./components/Footer";
+import Loading                        from "./components/Loading";
+import Button                         from 'react-bootstrap/Button';
+import Container                      from 'react-bootstrap/Container';
+import Stack                          from 'react-bootstrap/Stack';
+import Tabs                           from 'react-bootstrap/Tabs';
+import Tab                            from 'react-bootstrap/Tab';
 import "./App.css";
 
 const App = () => {
@@ -29,8 +31,16 @@ const App = () => {
   const [proposalWinningId, setProposalWinningId] = useState(null);
   const [votersCount, setVotersCount] = useState(0);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [activeTab, setActiveTab] = useState("votersRegistration");
 
-  // const inputRef = useRef();
+  const workflowTabs = {
+    0: "votersRegistration",
+    1: "proposalsRegistration",
+    2: "proposalsRegistration",
+    3: "votingSession",
+    4: "votingSession",
+    5: "votesTallied"
+  }
 
   useEffect(() => {
     (async () => {
@@ -58,7 +68,8 @@ const App = () => {
           owner
         });
         setWorkFlowStatus(workflowStatus);
-        
+        setActiveTab(workflowTabs[workflowStatus]);
+
         if (accounts[0] === owner) {
           const currentUser = await instance.methods.getVoter(accounts[0]).call({ from: accounts[0] });
           setCurrentUser(currentUser);
@@ -78,12 +89,9 @@ const App = () => {
             toBlock: 'latest'
           };
           const resetData = await instance.getPastEvents("ResetVote", options)
-      
+          const blockFromLastReset = resetData[resetData.length - 1] ? resetData[resetData.length - 1].returnValues.blockNumber : 0;
           options = {
-            // filter: {
-            //     value: "address"
-            // },
-            fromBlock: resetData[resetData.length - 1].returnValues.blockNumber,
+            fromBlock: blockFromLastReset,
             toBlock: 'latest'
           };  
           const votersData = await instance.getPastEvents("VoterRegistered", options)
@@ -134,7 +142,6 @@ const App = () => {
           .on("error", err => console.error(err))
           .on("connected", str => console.log(str));
       } catch (error) {
-        // Catch any errors for any of the above operations.
         alert(
           `Failed to load web3, accounts, or contract. Check console for details.`,
         );
@@ -174,6 +181,7 @@ const App = () => {
     const { contract, owner } = w3State;
     await contract.methods.startProposalsRegistering().send({ from: owner });
     await syncWorkflowStatus();
+    setActiveTab("proposalsRegistration");
   }
 
   const endProposalsRegistering = async () => {
@@ -186,6 +194,7 @@ const App = () => {
     const { contract, owner } = w3State;
     await contract.methods.startVotingSession().send({ from: owner });
     await syncWorkflowStatus();
+    setActiveTab("votingSession");
   }
 
   const endVotingSession = async () => {
@@ -200,6 +209,7 @@ const App = () => {
     await syncWorkflowStatus();
     const proposalsList = await contract.methods.getProposals().call({ from: owner });
     setProposals(proposalsList);
+    setActiveTab("votesTallied");
   }
 
   const resetVote = async () => {
@@ -210,6 +220,7 @@ const App = () => {
     const voters = await contract.methods.getVoters().call({ from: accounts[0] });
     setVotersCount(voters.length);
     setProposalWinningId(null);
+    setActiveTab("votersRegistration");
   }
 
   const isOwner = () => w3State.accounts[0] === w3State.owner;
@@ -252,26 +263,38 @@ const App = () => {
 
   const displayWinner = () => proposalWinningId && proposals[proposalWinningId];
 
+  const renderProposalWinner = () => (
+    <div>
+      <br />
+      <p><b>🔥 The winner proposal is: {proposals[proposalWinningId].description} 🔥</b></p>
+    </div>
+  )
+
+  const renderTabs = currentTab => (
+    <Tabs
+      id="controlled-tab-example"
+      activeKey={currentTab}
+      className="mb-5"
+    >
+      <Tab eventKey="votersRegistration" title="Voters registration" disabled />
+      <Tab eventKey="proposalsRegistration" title="Proposals registration" disabled />
+      <Tab eventKey="votingSession" title="Voting session" disabled />
+      <Tab eventKey="votesTallied" title="Votes tallied" disabled />
+    </Tabs>
+  )
+
   if (w3State.web3 === null) {
-    return (
-      <Container className="text-center">
-         <br /> <br />
-        <h3>Loading Web3, accounts, and contract...</h3>
-        <Spinner animation="border" />
-      </Container>
-    )
+    return <Loading />;
   }
 
   return (
     <div className="App">
       <Header userAddress={w3State.accounts[0]} userType={renderLoggedUser()} />
       <Container>
-        <Content />
-        {/* {isOwner() &&
-        <div>
-          <Button onClick={resetVote}>Reset vote</Button>
-          <br /><br />
-        </div>} */}
+        <Stack className="col-md-8 mx-auto">
+          <Content />
+          {isRegistered && renderTabs(activeTab)}
+        </Stack>
         <Stack gap={2} className="col-md-4 mx-auto">
           {isOwner() && renderStepButton()}
           {isOwner() &&
@@ -283,12 +306,7 @@ const App = () => {
               setValue={setVoterInput}
             />}
         </Stack>
-        {displayWinner() && (
-          <>
-            <br />
-            <p><b>🔥 The winner proposal is: {proposals[proposalWinningId].description} 🔥</b></p>
-          </>
-        )}
+        {displayWinner() && renderProposalWinner()}
         {isRegistered &&
           <WrapperProposal
             status={workflowStatus}

@@ -11,6 +11,7 @@ const Content = () => (
         <br /><br />
         <h3>Try this app made with truffle react box.</h3>
         <p>You can vote for a proposal from a secured and decentralized environment.</p>
+        <br />
     </div>
 )
 
