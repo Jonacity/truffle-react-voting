@@ -183,11 +183,7 @@ contract("Voting tests", accounts => {
         });
 
         it("Should revert voting for invalid proposal id", async () => {
-            await expectRevert(votingInstance.setVote(99, { from: user4 }), "Proposal not found");
-        });
-
-        it("Should revert voting when proposal id equals to proposalsArray length", async () => {
-            await expectRevert(votingInstance.setVote(4, { from: user4 }), "Panic: Index out of bounds");
+            await expectRevert(votingInstance.setVote(4, { from: user4 }), "Proposal not found");
         });
 
         it("Should update voted proposal id after voting", async () => {
