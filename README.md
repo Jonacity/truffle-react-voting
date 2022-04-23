@@ -41,6 +41,16 @@ ganache-cli
 // Run migrations
 truffle migrate
 
+// Go to client folder
+cd client
+
 // Start react app
 npm start
 ```
+
+## App deployed on Heroku
+
+- https://voting-react-dapp.herokuapp.com/
+
+![](client/public/app_home.png)
+

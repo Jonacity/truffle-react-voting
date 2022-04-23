@@ -100,7 +100,7 @@ contract("Voting tests", accounts => {
         });
 
         it("Should revert adding proposal without description", async () => {
-            await expectRevert(votingInstance.addProposal("", { from: user4 }), "Vous ne pouvez pas ne rien proposer");
+            await expectRevert(votingInstance.addProposal("", { from: user4 }), "You cannot add an empty proposal");
         });
 
         it("Should revert adding proposal from unregistered address", async () => {
