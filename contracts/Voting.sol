@@ -146,7 +146,7 @@ contract Voting is Ownable {
      *
      * @param _id Proposal id
      */
-    function setVote( uint _id) external onlyVoters {
+    function setVote(uint _id) external onlyVoters {
         require(workflowStatus == WorkflowStatus.VotingSessionStarted, "Voting session havent started yet");
         require(voters[msg.sender].hasVoted != true, "You have already voted");
         require(_id < proposalsArray.length, "Proposal not found");
@@ -172,6 +172,7 @@ contract Voting is Ownable {
      */
     function endProposalsRegistering() external onlyOwner {
         require(workflowStatus == WorkflowStatus.ProposalsRegistrationStarted, "Registering proposals havent started yet");
+        require(proposalsArray.length > 0, "No proposals registred");
 
         workflowStatus = WorkflowStatus.ProposalsRegistrationEnded;
         emit WorkflowStatusChange(WorkflowStatus.ProposalsRegistrationStarted, WorkflowStatus.ProposalsRegistrationEnded);
