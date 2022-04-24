@@ -1,5 +1,12 @@
 # Voting dApp
 
+## Voting process
+
+- The smart contract owner is a voter
+- Only 1 winner is designated
+- 50 proposals max are allowed
+- The owner can reset the vote after the tally
+
 ## Install dependencies
 
 ```
@@ -50,7 +57,7 @@ npm start
 
 ## App deployed on Heroku
 
-- https://voting-react-dapp.herokuapp.com/
+https://voting-react-dapp.herokuapp.com/
 
 ![](client/public/app_home.png)
 
